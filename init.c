@@ -1,8 +1,7 @@
 #include "util.h"
 #include "init.h"
 #include "usb.h"
-#include "hid_report.h"
-#include "desc/IIDX_PS3.h"
+#include "controller_specific/common.h"
 
 //extern variables
 uint8_t is_ps3;
@@ -10,19 +9,21 @@ const uint8_t* ep_list;
 const uint8_t* desc_list;
 uint8_t sizeof_ep_list;
 uint8_t sizeof_desc_list;
-uint8_t hid_report[64];
 uint8_t sizeof_hid_report;
+uint8_t hid_report[64];
+void (*hid_report_update)(void);
 
 // initialize USB
-void usb_init(enum controller_type ct) {
+void init(enum controller_type ct) {
     switch(ct){
     case IIDX_PS3:
         is_ps3 = 1;
         ep_list = (const uint8_t *) ep_list_IIDX_PS3;
-        desc_list = (const uint8_t *) desc_list_IIDX_PS3;
         sizeof_ep_list = 2;
+        desc_list = (const uint8_t *) desc_list_IIDX_PS3;
         sizeof_desc_list = 8;
-        sizeof_hid_report = 8;
+        hid_report_update = hid_report_update_IIDX_PS3;
+        sizeof_hid_report = 19;
         break;
     }
     HW_CONFIG();  // UHWCON = 0x81 USB device mode && enable the USB pad regulator

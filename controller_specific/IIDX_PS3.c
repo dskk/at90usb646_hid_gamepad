@@ -1,14 +1,6 @@
-#pragma once
 #include "common.h"
 #include "util.h"
-
-#define VID_IIDX_PS3              0x034c
-#define PID_IIDX_PS3              0x0368
-#define STR_PRODUCT_IIDX_PS3      L"PS3 IIDX controller"
-#define DEVICE_DESC_SIZE_IIDX_PS3 18
-#define CONFIG_DESC_SIZE_IIDX_PS3 34
-#define REPORT_DESC_SIZE_IIDX_PS3 112
-#define NUM_EP_IIDX_PS3           1
+#include "init.h"
 
 const struct str_desc_struct str_desc_product_IIDX_PS3 PROGMEM = {
     sizeof(STR_PRODUCT_IIDX_PS3),
@@ -140,10 +132,34 @@ const struct ep_list_struct ep_list_IIDX_PS3[] PROGMEM = {
 const struct desc_list_struct desc_list_IIDX_PS3[] PROGMEM = {
     {0x0100, 0x0000, (const uint8_t*)device_desc_IIDX_PS3,       DEVICE_DESC_SIZE_IIDX_PS3   },
     {0x0200, 0x0000, (const uint8_t*)config_desc_IIDX_PS3,       CONFIG_DESC_SIZE_IIDX_PS3   },
-    {0x2100, 0x0000, (const uint8_t*)config_desc_IIDX_PS3+18,    9                           },
+    {0x2100, 0x0000, (const uint8_t*)config_desc_IIDX_PS3+DEVICE_DESC_SIZE_IIDX_PS3,    9    },
     {0x2200, 0x0000, (const uint8_t*)report_desc_IIDX_PS3,       REPORT_DESC_SIZE_IIDX_PS3   },
     {0x0300, 0x0000, (const uint8_t*)&str_desc_langID,           4                           },
     {0x0301, 0x0409, (const uint8_t*)&str_desc_manufacturer,     sizeof(STR_MANUFACTURER)    },
     {0x0302, 0x0409, (const uint8_t*)&str_desc_product_IIDX_PS3, sizeof(STR_PRODUCT_IIDX_PS3)},
-    {0x0302, 0x0409, (const uint8_t*)&str_desc_serial,           sizeof(STR_SERIAL)          }
+    {0x0303, 0x0409, (const uint8_t*)&str_desc_serial,           sizeof(STR_SERIAL)          }
 };
+
+const uint8_t direction[]={8,6,4,5,2,8,3,8,0,7,8,8,1,8,8,8};
+void hid_report_update_IIDX_PS3(void) {
+    hid_report[0] = ~PINA;
+    hid_report[1] = ~PINC;
+    hid_report[2] = direction[((~PINF)>>4 | ((~PIND)&0b11110000))&0b1111];
+    hid_report[3] = 0x80;
+    hid_report[4] = 0x80;
+    hid_report[5] = 0x80;
+    hid_report[6] = 0x80;
+    hid_report[7] = 0;
+    hid_report[8] = 0;
+    hid_report[9] = 0;
+    hid_report[10] = 0;
+    hid_report[11] = 0;
+    hid_report[12] = 0;
+    hid_report[13] = 0;
+    hid_report[14] = 0;
+    hid_report[15] = 0;
+    hid_report[16] = 0;
+    hid_report[17] = 0;
+    hid_report[18] = 0;
+    return;
+}

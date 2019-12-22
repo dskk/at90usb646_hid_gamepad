@@ -1,6 +1,5 @@
 #include "util.h"
 #include "init.h"
-#include "hid_report.h"
 #include "usb.h"
 #include "common.h"
 
@@ -10,43 +9,9 @@
  *
  **************************************************************************/
 
-// zero when we are not configured, non-zero when enumerated
-volatile uint8_t usb_configuration = 0;
-
-// return 0 if the USB is not configured, or the configuration
-// number selected by the HOST
-uint8_t usb_configured(void) { return usb_configuration; }
-
-static uint8_t gamepad_idle_config = 0; 
-
-// protocol setting from the host.  We use exactly the same report
-// either way, so this variable only stores the setting since we
-// are required to be able to report which setting is in use.
-static uint8_t gamepad_protocol = 1;
-
-/**************************************************************************
- *
- *  Public Functions - these are the API intended for the user
- *
- **************************************************************************/
-
-inline void usb_gamepad_send(void) {
-    uint8_t intr_state, i;
-
-    if (!usb_configured()) return;
-    intr_state = SREG;
-    cli();
-    UENUM = 0;
-    if (!(UEINTX & (1<<RWAL))) return; // if not ready to transmit
-
-    for (i=0; i<sizeof_hid_report; i++) {
-        UEDATX = hid_report[i];
-    }
-
-    UEINTX = 0x3A; // send data
-    SREG = intr_state; // sei()
-    return;
-}
+volatile uint8_t usb_configuration = 0; // extern
+static volatile uint8_t gamepad_idle_config = 0; 
+static volatile uint8_t gamepad_protocol = 1;
 
 /**************************************************************************
  *
@@ -60,10 +25,7 @@ ISR(USB_GEN_vect) { //handle EORSTI
     intbits = UDINT;
     UDINT = 0; // clear interrupt flags
     if (intbits & (1<<EORSTI)) { // if End Of Reset Interrupt flag is set
-        UENUM = 0; // select endpoint 0 (control)
-        UECONX = 1; // bit0 : Set to enable the endpoint according to the device configuration.
-        UECFG0X = EP_TYPE_CONTROL; //Configure the endpoint direction and the endpoint type
-        UECFG1X = EP_SIZE(64) | EP_SINGLE_BUFFER; // Configure the endpoint size and the bank parametrization. Allocation and reorganization of the memory is made on-the-fly
+        configure_ep(0);
         UEIENX = (1<<RXSTPE); //Set to enable an endpoint interrupt (EPINTx) when RXSTPI is sent.
         // RXSTPI is Set by hardware to signal that the current bank contains a new valid SETUP packet.
         // RXSTPI is handled in USB_COM_vect
@@ -83,6 +45,15 @@ static inline void usb_wait_receive_out(void) {
 }
 static inline void usb_ack_out(void) {
     UEINTX = ~(1<<RXOUTI);
+}
+inline void configure_ep(int epnum){
+    const uint8_t* ep = ep_list+epnum*sizeof(struct ep_list_struct); // =&ep_list[0+offset]
+    UENUM = epnum;
+    UECONX = 1;
+    UECFG0X = pgm_read_byte(ep); //=ep.data_transfer_type
+    ep++;
+    UECFG1X = pgm_read_byte(ep); //=ep.size | ep.buffer_type
+    ep++;
 }
 
 // USB Endpoint Interrupt - endpoint 0 is handled here.  The
@@ -108,7 +79,7 @@ ISR(USB_COM_vect) {
         wLength = UEDATX;
         wLength |= (UEDATX << 8);
         UEINTX = ~((1<<RXSTPI) | (1<<RXOUTI) | (1<<TXINI));
-        if (REQUEST_TYPE(bmRequestType)==0b00) {
+        if (REQUEST_TYPE(bmRequestType) == STANDARD_REQUEST) {
             if (bRequest == GET_DESCRIPTOR) {
                 // descriptor to return is specified by its type(MSB) and index(LSB)
                 const uint8_t* desc = desc_list;
@@ -150,7 +121,7 @@ ISR(USB_COM_vect) {
                     if (i & (1<<RXOUTI)) return;    // abort
                     // send IN packet
                     n = len < 64 ? len : 64;
-                    for (i = n; i; i--) {
+                    for (i = n; i>0; i--) {
                         UEDATX = pgm_read_byte(desc_addr++);
                     }
                     len -= n;
@@ -158,18 +129,14 @@ ISR(USB_COM_vect) {
                 } while (len || n == 64);
                 return;
             }
-            if (bRequest == SET_CONFIGURATION && bmRequestType == 0) {
+            if (
+                (bRequest == SET_CONFIGURATION) &&
+                (REQUEST_DIRECTION(bmRequestType) == REQUEST_OUT) &&
+                (REQUEST_RECIPIENT(bmRequestType) == RECIPIENT_DEVICE)
+            ) {
                 usb_configuration = wValue;
                 usb_send_in();
-                const uint8_t* ep = ep_list;
-                for (i=1; i<=sizeof_ep_list; i++) {
-                    UENUM = i;
-                    UECONX = 1;
-                    UECFG0X = pgm_read_byte(ep); //ep.data_transfer_type
-                    ep++;
-                    UECFG1X = pgm_read_byte(ep); //ep.size | ep.buffer_type
-                    ep++;
-                }
+                for (i=1; i<sizeof_ep_list; i++) configure_ep(i);
                 UERST = 0x1E;
                 UERST = 0;
                 return;
@@ -180,7 +147,11 @@ ISR(USB_COM_vect) {
                 UDADDR = wValue | (1<<ADDEN);
                 return;
             }
-            if (bRequest == GET_CONFIGURATION && bmRequestType == 0x80) {
+            if (
+                (bRequest == GET_CONFIGURATION) &&
+                (REQUEST_DIRECTION(bmRequestType) == REQUEST_IN) &&
+                (REQUEST_RECIPIENT(bmRequestType) == RECIPIENT_DEVICE)
+            ) {
                 usb_wait_in_ready();
                 UEDATX = usb_configuration;
                 usb_send_in();
@@ -193,20 +164,23 @@ ISR(USB_COM_vect) {
                 usb_send_in();
                 return;
             }
-        } else if (REQUEST_TYPE(bmRequestType)==0b01) { // HID request
-            if (bmRequestType == 0xA1) { // in
-                if (bRequest == HID_GET_REPORT && is_ps3) {
-                    usb_wait_in_ready();
-                    UEDATX = 0x21; // "PS3 magic init bytes"
-                    UEDATX = 0x26;
-                    UEDATX = 0x01;
-                    UEDATX = 0x07;
-                    UEDATX = 0x00;
-                    UEDATX = 0x00;
-                    UEDATX = 0x00;
-                    UEDATX = 0x00;
-                    usb_send_in();
-                    return;
+        }
+        if (REQUEST_TYPE(bmRequestType) == CLASS_REQUEST) { // HID request
+            if (REQUEST_DIRECTION(bmRequestType) == REQUEST_IN) {
+                if (bRequest == HID_GET_REPORT) {
+                    if(is_ps3) {
+                        usb_wait_in_ready();
+                        UEDATX = 0x21; // "PS3 magic init bytes"
+                        UEDATX = 0x26;
+                        UEDATX = 0x01;
+                        UEDATX = 0x07;
+                        UEDATX = 0x00;
+                        UEDATX = 0x00;
+                        UEDATX = 0x00;
+                        UEDATX = 0x00;
+                        usb_send_in();
+                        return;
+                    } // else...?
                 }
                 if (bRequest == HID_GET_IDLE) {
                     usb_wait_in_ready();
@@ -221,7 +195,7 @@ ISR(USB_COM_vect) {
                     return;
                 }
             }
-            if (bmRequestType == 0x21) { //out
+            if (REQUEST_DIRECTION(bmRequestType) == REQUEST_OUT) {
                 if (bRequest == HID_SET_REPORT) {
                     usb_wait_receive_out();
                     usb_ack_out();
@@ -229,7 +203,7 @@ ISR(USB_COM_vect) {
                     return;
                 }
                 if (bRequest == HID_SET_IDLE) {
-                    gamepad_idle_config = (wValue >> 8);
+                    gamepad_idle_config = MSB(wValue);
                     usb_send_in();
                     return;
                 }
@@ -241,5 +215,5 @@ ISR(USB_COM_vect) {
             }
         }
     }
-    UECONX = (1<<STALLRQ) | (1<<EPEN);// stall
+    UECONX = (1<<STALLRQ) | (1<<EPEN); // stall
 }

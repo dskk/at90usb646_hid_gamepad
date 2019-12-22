@@ -39,13 +39,12 @@
 # To rebuild project do "make clean" then "make all".
 #----------------------------------------------------------------------------
 
-
 # Target file name (without extension).
 TARGET = main
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC =	$(TARGET).c hid_report.c init.c usb.c desc/common.c
+SRC := $(TARGET).c $(wildcard *.c) $(wildcard controller_specific/*.c)
 
 
 # MCU name, you MUST set this to match the board you are using
@@ -106,7 +105,7 @@ DEBUG = dwarf-2
 #     Each directory must be seperated by a space.
 #     Use forward slashes for directory separators.
 #     For a directory that has spaces, enclose it in quotes.
-EXTRAINCDIRS = desc
+EXTRAINCDIRS = controller_specific
 
 
 # Compiler flag to set the C Standard level.

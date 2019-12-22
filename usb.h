@@ -2,9 +2,6 @@
 
 extern volatile uint8_t usb_configuration;
 
-uint8_t usb_configured(void);        // is the USB port configured
-void usb_gamepad_send(void);
-
 // standard control endpoint request types
 #define GET_STATUS          0
 #define CLEAR_FEATURE       1
@@ -22,3 +19,15 @@ void usb_gamepad_send(void);
 #define HID_SET_REPORT      9
 #define HID_SET_IDLE        10
 #define HID_SET_PROTOCOL    11
+// bmRequestType masks and constants
+#define REQUEST_TYPE(n)       (n & 0b01100000)
+#define STANDARD_REQUEST           0b00000000
+#define CLASS_REQUEST              0b00100000
+#define REQUEST_DIRECTION(n)  (n & 0b10000000)
+#define REQUEST_OUT                0b00000000
+#define REQUEST_IN                 0b10000000
+#define REQUEST_RECIPIENT(n)  (n & 0b00011111)
+#define RECIPIENT_DEVICE           0b00000000
+#define RECIPIENT_INTERFACE        0b00000001
+#define RECIPIENT_ENDPOINT         0b00000010
+#define RECIPIENT_OTHERS           0b00000011

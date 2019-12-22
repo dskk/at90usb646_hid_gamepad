@@ -20,4 +20,3 @@ enum  controller_type { IIDX_PS3, IIDX_PC_KONAMI, IIDX_PC_NORMAL, SDVX_PC_KONAMI
 
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
-#define REQUEST_TYPE(n) ((n >> 5) & 0b11)
