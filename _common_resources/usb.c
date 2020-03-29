@@ -3,35 +3,10 @@
 #include "usb.h"
 #include "common.h"
 
-/**************************************************************************
- *
- *  Variables - these are the only non-stack RAM usage
- *
- **************************************************************************/
-
-volatile uint8_t usb_configuration = 0; // extern
-static volatile uint8_t gamepad_idle_config = 0; 
+//variables
+volatile uint8_t usb_configuration = 0; // ->extern
+static volatile uint8_t gamepad_idle_config = 0;
 static volatile uint8_t gamepad_protocol = 1;
-
-/**************************************************************************
- *
- *  Private Functions - not intended for general user consumption....
- *
- **************************************************************************/
-
-ISR(USB_GEN_vect) { //handle EORSTI
-    uint8_t intbits;
-
-    intbits = UDINT;
-    UDINT = 0; // clear interrupt flags
-    if (intbits & (1<<EORSTI)) { // if End Of Reset Interrupt flag is set
-        configure_ep(0);
-        UEIENX = (1<<RXSTPE); //Set to enable an endpoint interrupt (EPINTx) when RXSTPI is sent.
-        // RXSTPI is Set by hardware to signal that the current bank contains a new valid SETUP packet.
-        // RXSTPI is handled in USB_COM_vect
-        usb_configuration = 0;
-    }
-}
 
 // Misc functions to wait for ready and send/receive packets
 static inline void usb_wait_in_ready(void) {
@@ -47,20 +22,33 @@ static inline void usb_ack_out(void) {
     UEINTX = ~(1<<RXOUTI);
 }
 inline void configure_ep(int epnum){
-    const uint8_t* ep = ep_list+epnum*sizeof(struct ep_list_struct); // =&ep_list[0+offset]
+    const uint8_t* ep = ep_list+epnum*sizeof(struct ep_list_struct); // ==&ep_list[0+offset]
     UENUM = epnum;
     UECONX = 1;
-    UECFG0X = pgm_read_byte(ep); //=ep.data_transfer_type
+    UECFG0X = pgm_read_byte(ep); //==ep.data_transfer_type
     ep++;
-    UECFG1X = pgm_read_byte(ep); //=ep.size | ep.buffer_type
+    UECFG1X = pgm_read_byte(ep); //==(ep.size | ep.buffer_type)
     ep++;
+}
+
+ISR(USB_GEN_vect) { //handle EORSTI
+    if (UDINT & (1<<EORSTI)) { // if End Of Reset Interrupt flag is set
+        UDINT = 0; // clear interrupt flags
+        configure_ep(0);
+        UEIENX = (1<<RXSTPE); //Set to enable an endpoint interrupt (EPINTx) when RXSTPI is sent.
+        // RXSTPI is Set by hardware to signal that the current bank contains a new valid SETUP packet.
+        // RXSTPI is handled in USB_COM_vect
+        usb_configuration = 0;
+    }else{
+        UDINT = 0; // clear interrupt flags
+    }
 }
 
 // USB Endpoint Interrupt - endpoint 0 is handled here.  The
 // other endpoints are manipulated by the user-callable
 // functions, and the start-of-frame interrupt.
 ISR(USB_COM_vect) {
-    uint8_t i, intbits;
+    uint8_t i;
     uint8_t bmRequestType;
     uint8_t bRequest;
     uint16_t wValue;
@@ -68,8 +56,7 @@ ISR(USB_COM_vect) {
     uint16_t wLength;
 
     UENUM = 0;
-    intbits = UEINTX;
-    if (intbits & (1<<RXSTPI)) {
+    if (UEINTX & (1<<RXSTPI)) {
         bmRequestType = UEDATX;
         bRequest = UEDATX;
         wValue = UEDATX;
@@ -88,7 +75,7 @@ ISR(USB_COM_vect) {
                 const uint8_t* desc_addr;
                 uint8_t desc_length;
                 uint8_t n, len, isok = 0;
-                for (i=0; i<sizeof_desc_list; i++) {
+                for (i=0; i<desc_list_len; i++) {
                     desc_val = pgm_read_word(desc);
                     if (desc_val != wValue) {
                         desc += sizeof(struct desc_list_struct);
@@ -136,7 +123,7 @@ ISR(USB_COM_vect) {
             ) {
                 usb_configuration = wValue;
                 usb_send_in();
-                for (i=1; i<sizeof_ep_list; i++) configure_ep(i);
+                for (i=1; i<ep_list_len; i++) configure_ep(i);
                 UERST = 0x1E;
                 UERST = 0;
                 return;
@@ -167,8 +154,8 @@ ISR(USB_COM_vect) {
         }
         if (REQUEST_TYPE(bmRequestType) == CLASS_REQUEST) { // HID request
             if (REQUEST_DIRECTION(bmRequestType) == REQUEST_IN) {
-                if (bRequest == HID_GET_REPORT) {
-                    if(is_ps3) {
+                /* if (bRequest == HID_GET_REPORT) {
+                        if(is_ps3) {
                         usb_wait_in_ready();
                         UEDATX = 0x21; // "PS3 magic init bytes"
                         UEDATX = 0x26;
@@ -181,7 +168,7 @@ ISR(USB_COM_vect) {
                         usb_send_in();
                         return;
                     } // else...?
-                }
+                } */
                 if (bRequest == HID_GET_IDLE) {
                     usb_wait_in_ready();
                     UEDATX = gamepad_idle_config;

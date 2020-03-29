@@ -1,7 +1,5 @@
 #pragma once
 
-extern volatile uint8_t usb_configuration;
-
 // standard control endpoint request types
 #define GET_STATUS          0
 #define CLEAR_FEATURE       1
@@ -31,3 +29,5 @@ extern volatile uint8_t usb_configuration;
 #define RECIPIENT_INTERFACE        0b00000001
 #define RECIPIENT_ENDPOINT         0b00000010
 #define RECIPIENT_OTHERS           0b00000011
+
+extern volatile uint8_t usb_configuration;

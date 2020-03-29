@@ -33,18 +33,19 @@ const struct str_desc_struct str_desc_langID;
 const struct str_desc_struct str_desc_manufacturer;
 const struct str_desc_struct str_desc_serial;
 
-// IIDX_PS3
-#define VID_IIDX_PS3              0x034c
-#define PID_IIDX_PS3              0x0368
-#define STR_PRODUCT_IIDX_PS3      L"PS3 IIDX controller"
-#define DEVICE_DESC_SIZE_IIDX_PS3 18
-#define CONFIG_DESC_SIZE_IIDX_PS3 34
-#define REPORT_DESC_SIZE_IIDX_PS3 112
-#define NUM_EP_IIDX_PS3           1
-const struct str_desc_struct str_desc_product_IIDX_PS3;
-const uint8_t device_desc_IIDX_PS3[];
-const uint8_t config_desc_IIDX_PS3[];
-const uint8_t report_desc_IIDX_PS3[];
-const struct ep_list_struct ep_list_IIDX_PS3[];
-const struct desc_list_struct desc_list_IIDX_PS3[];
-void hid_report_update_IIDX_PS3(void);
+// PS3
+#define VID_PS3              0x0f0d
+#define PID_PS3              0x0022
+#define STR_PRODUCT_PS3      L"PS3 IIDX controller"
+#define DEVICE_DESC_SIZE_PS3 18
+#define CONFIG_DESC_SIZE_PS3 41
+#define REPORT_DESC_SIZE_PS3 137
+#define NUM_EP_PS3           2
+const struct str_desc_struct str_desc_product_PS3;
+const uint8_t device_desc_PS3[];
+const uint8_t config_desc_PS3[];
+const uint8_t report_desc_PS3[];
+const struct ep_list_struct ep_list_PS3[];
+const struct desc_list_struct desc_list_PS3[];
+const func_ptr_t hid_report_send_func_list_PS3[];
+const func_ptr_t hid_report_recv_func_list_PS3[];

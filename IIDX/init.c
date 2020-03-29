@@ -1,31 +1,31 @@
 #include "util.h"
 #include "init.h"
 #include "usb.h"
-#include "controller_specific/common.h"
+#include "modes/common.h"
 
 //extern variables
-uint8_t is_ps3;
 const uint8_t* ep_list;
 const uint8_t* desc_list;
-uint8_t sizeof_ep_list;
-uint8_t sizeof_desc_list;
-uint8_t sizeof_hid_report;
-uint8_t hid_report[64];
-void (*hid_report_update)(void);
+const func_ptr_t* hid_report_send_func_list;
+const func_ptr_t* hid_report_recv_func_list;
+uint8_t ep_list_len;
+uint8_t desc_list_len;
+uint8_t hid_report_send_func_list_len;
+uint8_t hid_report_recv_func_list_len;
 
 // initialize USB
-void init(enum controller_type ct) {
-    switch(ct){
-    case IIDX_PS3:
-        is_ps3 = 1;
-        ep_list = (const uint8_t *) ep_list_IIDX_PS3;
-        sizeof_ep_list = 2;
-        desc_list = (const uint8_t *) desc_list_IIDX_PS3;
-        sizeof_desc_list = 8;
-        hid_report_update = hid_report_update_IIDX_PS3;
-        sizeof_hid_report = 19;
-        break;
-    }
+void init(void) {
+    // read EEPROM
+    // switch~case:
+        ep_list = (const uint8_t *) ep_list_PS3;
+        desc_list = (const uint8_t *) desc_list_PS3;
+        hid_report_send_func_list = (const func_ptr_t *) hid_report_send_func_list_PS3;
+        hid_report_recv_func_list = (const func_ptr_t *) hid_report_recv_func_list_PS3;
+        ep_list_len = 2;
+        desc_list_len = 8;
+        hid_report_send_func_list_len = 1;
+        hid_report_recv_func_list_len = 1;
+
     HW_CONFIG();  // UHWCON = 0x81 USB device mode && enable the USB pad regulator
     USB_FREEZE(); // enable the USB controller && disable the clock inputs
     PLL_CONFIG(); // (Clock division factor)=8 (External XTAL)=16MHz enable PLL

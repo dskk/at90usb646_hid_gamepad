@@ -4,8 +4,6 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 
-enum  controller_type { IIDX_PS3, IIDX_PC_KONAMI, IIDX_PC_NORMAL, SDVX_PC_KONAMI, SDVX_PC_NORMAL, POPN_PS3, POPN_PC_NORMAL };
-
 #define EP_TYPE_CONTROL         0x00
 #define EP_TYPE_INTERRUPT_IN    0xC1
 #define EP_TYPE_INTERRUPT_OUT   0xC0
@@ -20,3 +18,5 @@ enum  controller_type { IIDX_PS3, IIDX_PC_KONAMI, IIDX_PC_NORMAL, SDVX_PC_KONAMI
 
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
+
+typedef void (*func_ptr_t)(void);
