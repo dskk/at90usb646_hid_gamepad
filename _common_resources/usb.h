@@ -31,3 +31,4 @@
 #define RECIPIENT_OTHERS           0b00000011
 
 extern volatile uint8_t usb_configuration;
+extern uint8_t is_ps3;

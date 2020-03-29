@@ -25,6 +25,7 @@ void init(void) {
         desc_list_len = 8;
         hid_report_send_func_list_len = 1;
         hid_report_recv_func_list_len = 1;
+        is_ps3 = 1;
 
     HW_CONFIG();  // UHWCON = 0x81 USB device mode && enable the USB pad regulator
     USB_FREEZE(); // enable the USB controller && disable the clock inputs

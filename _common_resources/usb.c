@@ -4,6 +4,7 @@
 #include "common.h"
 
 //variables
+uint8_t is_ps3 = 0; // ->extern
 volatile uint8_t usb_configuration = 0; // ->extern
 static volatile uint8_t gamepad_idle_config = 0;
 static volatile uint8_t gamepad_protocol = 1;
@@ -154,7 +155,7 @@ ISR(USB_COM_vect) {
         }
         if (REQUEST_TYPE(bmRequestType) == CLASS_REQUEST) { // HID request
             if (REQUEST_DIRECTION(bmRequestType) == REQUEST_IN) {
-                /* if (bRequest == HID_GET_REPORT) {
+                if (bRequest == HID_GET_REPORT) {
                         if(is_ps3) {
                         usb_wait_in_ready();
                         UEDATX = 0x21; // "PS3 magic init bytes"
@@ -167,8 +168,8 @@ ISR(USB_COM_vect) {
                         UEDATX = 0x00;
                         usb_send_in();
                         return;
-                    } // else...?
-                } */
+                    }
+                }
                 if (bRequest == HID_GET_IDLE) {
                     usb_wait_in_ready();
                     UEDATX = gamepad_idle_config;
