@@ -1,5 +1,6 @@
 //http://git.slashdev.ca/ps3-teensy-hid/tree/src
 #include <avr/io.h>
+#include <avr/eeprom.h>
 #include <util/delay.h>
 #include "init.h"
 #include "util.h"
@@ -21,45 +22,9 @@ func_ptr_t start_bootloader=(func_ptr_t)0xf000;
 struct states_str_t states_str;
 const uint16_t button_lock_duration=20000; //20000/2us=10ms
 const uint16_t scratch_lock_duration=20000; //20000/2us=10ms
-const uint16_t scratch_keep_duration=18750; //18750*16us=300ms
+const uint16_t scratch_keep_duration=12500; //12500*16us=200ms
 const uint8_t photo_state[] = { 0, 1, 3, 2 };
 int8_t last_photo_state;
-
-inline void io_init(void){
-    ACSR |= (1<<ACD); //ADC off
-    asm volatile (
-        "out %1, %0"      "\n\t"
-        "out %1, %0"      "\n\t"
-        :
-        : "r" ((uint8_t) 1 << JTD), "i" (_SFR_IO_ADDR(MCUCR))
-    );// Disable JTAG so as to use PORTF bit4-7 as I/O pins.
-    DDRA=0;
-    DDRB=0;
-    DDRC=0xFF;
-    DDRD=0xFF;
-    DDRE=0;
-    DDRF=0;
-    PORTA=0xff;
-    PORTB=0xff;
-    PORTC=0;
-    PORTD=0;
-    PORTE=0xff;
-    PORTF=0xff;
-    if(bit_is_clear(PINF,5) && bit_is_clear(PINF,6)) start_bootloader();
-    TCCR1A=0; //タイマ1の波形出力設定。波形出力なし
-    TCCR1B=2; //通常モード、1/8分周=2MHzでタイマ1(16bitタイマ)スタート。65536/2us=32.768msでオーバーフローする。
-    TCCR3A=0; //タイマ3の波形出力設定。波形出力なし
-    TCCR3B=4; //通常モード、1/256分周=1/16MHzでタイマ3(16bitタイマ)スタート。65536*16us=1048.576msでオーバーフローする。
-    states_str.button_state=0;
-    states_str.scratch_state=0;
-    states_str.scratch_position=0;
-    for(uint8_t i=0; i<16; i++){
-        states_str.button_is_locked[i]=0;
-        states_str.scratch_is_locked=0;
-    }
-    last_photo_state=photo_state[PINE>>6];
-    return;
-}
 
 volatile uint8_t* in_pin[11]={
     &PINA, //1
@@ -171,17 +136,68 @@ inline void update(void){
     }
     last_photo_state=photo_state[PINE>>6];
 }
+
+inline void io_init(void){
+    ACSR |= (1<<ACD); //ADC off
+    asm volatile (
+        "out %1, %0"      "\n\t"
+        "out %1, %0"      "\n\t"
+        :
+        : "r" ((uint8_t) 1 << JTD), "i" (_SFR_IO_ADDR(MCUCR))
+    );// Disable JTAG so as to use PORTF bit4-7 as I/O pins.
+    CLKPR = 0x80; //clock prescaler change enable
+    CLKPR = 0; //set for 16MHz clock
+    DDRA=0;
+    DDRB=0;
+    DDRC=0xFF;
+    DDRD=0xFF;
+    DDRE=0;
+    DDRF=0;
+    PORTA=0xff;
+    PORTB=0xff;
+    PORTC=0;
+    PORTD=0;
+    PORTE=0xff;
+    PORTF=0xff;
+    if(bit_is_clear(*in_pin[7],in_bit[7]) && bit_is_clear(*in_pin[8],in_bit[8])) start_bootloader();
+    TCCR1A=0; //タイマ1の波形出力設定。波形出力なし
+    TCCR1B=2; //通常モード、1/8分周=2MHzでタイマ1(16bitタイマ)スタート。65536/2us=32.768msでオーバーフローする。
+    TCCR3A=0; //タイマ3の波形出力設定。波形出力なし
+    TCCR3B=4; //通常モード、1/256分周=1/16MHzでタイマ3(16bitタイマ)スタート。65536*16us=1048.576msでオーバーフローする。
+    if(bit_is_clear(*in_pin[7],in_bit[7])){ //mode change
+        for(uint8_t flag=1;flag;){
+            if(TCNT3<32768){ //ボタン点滅
+                for(uint8_t i=0; i<11; i++) *out_pin[i]|=(1<<out_bit[i]);
+            }else{ //ボタン点滅
+                for(uint8_t i=0; i<11; i++) *out_pin[i]&=~(1<<out_bit[i]);
+            }
+            for(uint8_t i=0; i<7; i++){
+                if(bit_is_clear(*in_pin[i],in_bit[i])){
+                    for(uint8_t i=0; i<11; i++) *out_pin[i]&=~(1<<out_bit[i]);
+                    flag=0;
+                    eeprom_write_byte(EEP_ADDR, i);
+                    eeprom_busy_wait();
+                    break;
+                }
+            }
+        }
+    }
+    states_str.button_state=0;
+    states_str.scratch_state=0;
+    states_str.scratch_position=0;
+    for(uint8_t i=0; i<16; i++){
+        states_str.button_is_locked[i]=0;
+        states_str.scratch_is_locked=0;
+    }
+    last_photo_state=photo_state[PINE>>6];
+    return;
+}
 /* board specific */
 
 int main(void) {
     io_init();
-    CLKPR = 0x80; //clock prescaler change enable
-    CLKPR = 0; //set for 16MHz clock
-
-    // Initialize the USB, and then wait for the host to set configuration.
-    //if(!(~PINA)) {START_BOOTLOADER();}
-    init();
-    while (usb_configuration==0); // wait
+    usb_init();
+    while (usb_configuration==0); // wait for the host to set configuration.
     // Wait an extra second for the PC's operating system to load drivers
     // and do whatever it does to actually be ready for input
     _delay_ms(1000);

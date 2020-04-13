@@ -19,4 +19,6 @@
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
 
+#define EEP_ADDR                0x00
+
 typedef void (*func_ptr_t)(void);

@@ -1,3 +1,4 @@
+#include <avr/eeprom.h>
 #include "util.h"
 #include "init.h"
 #include "usb.h"
@@ -14,9 +15,11 @@ uint8_t hid_report_send_func_list_len;
 uint8_t hid_report_recv_func_list_len;
 
 // initialize USB
-void init(void) {
-    // read EEPROM
-    // switch~case:
+void usb_init(void) {
+    uint8_t eep_val = eeprom_read_byte(0x00); // read EEPROM
+    eeprom_busy_wait();
+    switch(eep_val){
+    case 1: //PS3
         ep_list = (const uint8_t *) ep_list_PS3;
         desc_list = (const uint8_t *) desc_list_PS3;
         hid_report_send_func_list = (const func_ptr_t *) hid_report_send_func_list_PS3;
@@ -26,6 +29,10 @@ void init(void) {
         hid_report_send_func_list_len = 1;
         hid_report_recv_func_list_len = 1;
         is_ps3 = 1;
+        break;
+    default:
+        for(;;);
+    }
 
     HW_CONFIG();  // UHWCON = 0x81 USB device mode && enable the USB pad regulator
     USB_FREEZE(); // enable the USB controller && disable the clock inputs

@@ -1,7 +1,7 @@
 #pragma once
 #include "util.h"
 
-void init(void);
+void usb_init(void);
 
 #if defined(__AVR_AT90USB162__)
 #define HW_CONFIG()
