@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 
 struct states_str_t{
     uint16_t  button_state; //pressed=1 else=0
@@ -10,5 +11,8 @@ struct states_str_t{
     int32_t   scratch_locked_time;
     int32_t   scratch_kept_time;
 };
+
+void usb_task_PS3(void);
+void usb_task_INFINITAS(void);
 
 extern struct states_str_t states_str;

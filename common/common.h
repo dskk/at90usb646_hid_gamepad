@@ -3,6 +3,9 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include <avr/eeprom.h>
+
+typedef void (*func_ptr_t)(void);
 
 #define EP_TYPE_CONTROL         0x00
 #define EP_TYPE_INTERRUPT_IN    0xC1
@@ -19,6 +22,4 @@
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
 
-#define EEP_ADDR                0x00
-
-typedef void (*func_ptr_t)(void);
+extern volatile func_ptr_t usb_task_ptr;

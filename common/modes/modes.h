@@ -7,10 +7,9 @@
 // 21h HID desc
 // 22h HID report desc
 #pragma once
-#include "util.h"
+#include "common.h"
 
 #define STR_MANUFACTURER  L"Cialis"
-#define STR_SERIAL        L"191206_000"
 
 struct ep_list_struct {
     uint8_t data_transfer_type;
@@ -31,21 +30,23 @@ struct str_desc_struct {
 
 const struct str_desc_struct str_desc_langID;
 const struct str_desc_struct str_desc_manufacturer;
-const struct str_desc_struct str_desc_serial;
+//const struct str_desc_struct str_desc_serial;
 
 // PS3
-#define VID_PS3              0x0f0d
-#define PID_PS3              0x0022
-#define STR_PRODUCT_PS3      L"PS3 IIDX controller"
-#define DEVICE_DESC_SIZE_PS3 18
-#define CONFIG_DESC_SIZE_PS3 41
-#define REPORT_DESC_SIZE_PS3 137
-#define NUM_EP_PS3           2
 const struct str_desc_struct str_desc_product_PS3;
 const uint8_t device_desc_PS3[];
 const uint8_t config_desc_PS3[];
 const uint8_t report_desc_PS3[];
 const struct ep_list_struct ep_list_PS3[];
 const struct desc_list_struct desc_list_PS3[];
-const func_ptr_t hid_report_send_func_list_PS3[];
-const func_ptr_t hid_report_recv_func_list_PS3[];
+void hid_report_send_PS3(uint8_t byte1, uint8_t byte2, uint8_t byte3);
+void hid_report_recv_PS3(void);
+// INFINITAS
+const struct str_desc_struct str_desc_product_INFINITAS;
+const uint8_t device_desc_INFINITAS[];
+const uint8_t config_desc_INFINITAS[];
+const uint8_t report_desc_INFINITAS[];
+const struct ep_list_struct ep_list_INFINITAS[];
+const struct desc_list_struct desc_list_INFINITAS[];
+void hid_report_send_INFINITAS(uint8_t byte1, uint8_t byte3, uint8_t byte4);
+void hid_report_recv_INFINITAS(void);

@@ -1,13 +1,53 @@
-#include "util.h"
-#include "init.h"
-#include "usb.h"
 #include "common.h"
+#include "usb.h"
+#include "states_struct.h"
+#include "modes.h"
 
 //variables
-uint8_t is_ps3 = 0; // ->extern
 volatile uint8_t usb_configuration = 0; // ->extern
+volatile func_ptr_t usb_task_ptr; // -> extern
 static volatile uint8_t gamepad_idle_config = 0;
 static volatile uint8_t gamepad_protocol = 1;
+
+void usb_init(void) {
+    uint8_t eep_val = eeprom_read_byte(EEP_ADDR); // read EEPROM
+    eeprom_busy_wait();
+    switch(eep_val){
+    case 1: //PS3
+        ep_list = (const uint8_t *) ep_list_PS3;
+        desc_list = (const uint8_t *) desc_list_PS3;
+        ep_list_len = 2;
+        desc_list_len = 7;
+        is_ps3 = 1;
+        usb_task_ptr=&usb_task_PS3;
+        break;
+    case 2: //INFINITAS
+        ep_list = (const uint8_t *) ep_list_INFINITAS;
+        desc_list = (const uint8_t *) desc_list_INFINITAS;
+        ep_list_len = 2;
+        desc_list_len = 7;
+        is_ps3 = 0;
+        usb_task_ptr=&usb_task_INFINITAS;
+        break;
+    default:
+        for(;;);
+    }
+
+    HW_CONFIG();  // UHWCON = 0x81 USB device mode && enable the USB pad regulator
+    USB_FREEZE(); // enable the USB controller && disable the clock inputs
+    PLL_CONFIG(); // (Clock division factor)=8 (External XTAL)=16MHz enable PLL
+    while (!(PLLCSR & (1<<PLOCK))); // wait for PLL lock (it takes about 100 ms)
+    USB_CONFIG(); // start USB clock
+    UDCON = 0; // clear bit0 - DETACH (Set to physically detach
+               // the device by disconnecting internal pull-up on D+ or D-).
+    usb_configuration = 0; // zero when we are not configured, non-zero when enumerated
+    UDIEN = (1<<EORSTE)|(1<<SOFE); //enable the EORSTI interrupt and SOFI interrput
+    // EORSTI - End Of Reset Interrupt flag.
+    // Set by hardware when an “End Of Reset” has been detected by the USB controller.
+    // SOFI - Start Of Frame Interrupt flag.
+    // Set by hardware when an USB “Start Of Frame” PID (SOF) has been detected (every 1ms).
+    sei();
+}
 
 // Misc functions to wait for ready and send/receive packets
 static inline void usb_wait_in_ready(void) {
@@ -156,7 +196,7 @@ ISR(USB_COM_vect) {
         if (REQUEST_TYPE(bmRequestType) == CLASS_REQUEST) { // HID request
             if (REQUEST_DIRECTION(bmRequestType) == REQUEST_IN) {
                 if (bRequest == HID_GET_REPORT) {
-                        if(is_ps3) {
+                    if(is_ps3) {
                         usb_wait_in_ready();
                         UEDATX = 0x21; // "PS3 magic init bytes"
                         UEDATX = 0x26;

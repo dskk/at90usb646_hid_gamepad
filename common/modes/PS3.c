@@ -1,8 +1,14 @@
 #include "common.h"
-#include "util.h"
-#include "init.h"
 #include "usb.h"
-#include "states_struct.h"
+#include "modes.h"
+
+#define VID_PS3              0x0f0d
+#define PID_PS3              0x0022
+#define STR_PRODUCT_PS3      L"PS3 IIDX controller"
+#define DEVICE_DESC_SIZE_PS3 18
+#define CONFIG_DESC_SIZE_PS3 41
+#define REPORT_DESC_SIZE_PS3 137
+#define NUM_EP_PS3           2
 
 const struct str_desc_struct str_desc_product_PS3 PROGMEM = {
     sizeof(STR_PRODUCT_PS3),
@@ -156,34 +162,11 @@ const struct desc_list_struct desc_list_PS3[] PROGMEM = {
     {0x2200, 0x0000, (const uint8_t*)report_desc_PS3,                      REPORT_DESC_SIZE_PS3    },
     {0x0300, 0x0000, (const uint8_t*)&str_desc_langID,                     4                       },
     {0x0301, 0x0409, (const uint8_t*)&str_desc_manufacturer,               sizeof(STR_MANUFACTURER)},
-    {0x0302, 0x0409, (const uint8_t*)&str_desc_product_PS3,                sizeof(STR_PRODUCT_PS3) },
-    {0x0303, 0x0409, (const uint8_t*)&str_desc_serial,                     sizeof(STR_SERIAL)      }
+    {0x0302, 0x0409, (const uint8_t*)&str_desc_product_PS3,                sizeof(STR_PRODUCT_PS3) }
 };
 
-/*
-reorderL=[]
-for i in range(64):
-    res=0
-    for j in range(6):
-        if i&(1<<j):
-            x=16 if j%2 else 1
-            res+=(1<<(j//2))*x
-    reorderL.append(res)
-*/
-const uint8_t reorderL[64] = { // xx654321 -> x642x531
-    0, 1, 16, 17, 2, 3, 18, 19, 32, 33, 48, 49, 34, 35, 50, 51,
-    4, 5, 20, 21, 6, 7, 22, 23, 36, 37, 52, 53, 38, 39, 54, 55,
-    64, 65, 80, 81, 66, 67, 82, 83, 96, 97, 112, 113, 98, 99,
-    114, 115, 68, 69, 84, 85, 70, 71, 86, 87, 100, 101, 116, 117,
-    102, 103, 118, 119
-};
-
-const uint8_t reorderH[16] = { // xxxx4321 -> xxx4xx12
-    0, 2, 1, 3, 0, 2, 1, 3, 16, 18, 17, 19, 16, 18, 17, 19
-};
-
-void hid_report_send_1_PS3(void) { //dir=in ep=1
-    uint8_t intr_state, i;
+void hid_report_send_PS3(uint8_t byte1, uint8_t byte2, uint8_t byte3) { //dir=in ep=1
+    uint8_t intr_state;
     if (usb_configuration==0) return; // if not configured
     intr_state = SREG; // take memo for restoring SREG later
     cli(); // this will affect SREG
@@ -192,21 +175,9 @@ void hid_report_send_1_PS3(void) { //dir=in ep=1
         SREG = intr_state; // restore SREG ( = sei() )
         return;
     }
-    UEDATX = reorderL[states_str.button_state&0b111111];
-    UEDATX = reorderH[(states_str.button_state>>7)&0b1111];
-    if(states_str.button_state&0b1000000000){ // right pressed
-        if(states_str.scratch_state==1) UEDATX = 0x01; //up pressed
-        else if(states_str.scratch_state==2) UEDATX = 0x03; //down pressed
-        else UEDATX = 0x02;
-    }else if(states_str.button_state&0b1000000){ //left pressed
-        if(states_str.scratch_state==1) UEDATX = 0x07; //up pressed
-        else if(states_str.scratch_state==2) UEDATX = 0x05; //down pressed
-        else UEDATX = 0x06;
-    }else{
-        if(states_str.scratch_state==1) UEDATX = 0x00; //up pressed
-        else if(states_str.scratch_state==2) UEDATX = 0x04; //down pressed
-        else UEDATX = 0x0f;
-    }
+    UEDATX = byte1;
+    UEDATX = byte2;
+    UEDATX = byte3;
     UEDATX = 0x80;
     UEDATX = 0x80;
     UEDATX = 0x80;
@@ -236,12 +207,12 @@ void hid_report_send_1_PS3(void) { //dir=in ep=1
     return;
 }
 
-void hid_report_recv_2_PS3(void) { //dir=out ep=2
+void hid_report_recv_PS3(void) { //dir=out ep=2
     uint8_t intr_state;
     if (usb_configuration==0) return; // if not configured
     intr_state = SREG; // take memo for restoring SREG later
     cli(); // this will affect SREG
-    UENUM = 2; // select endpoint 1
+    UENUM = 2; // select endpoint 2
     if (!(UEINTX & (1<<RWAL))){ // if not ready to transmit
         SREG = intr_state; // restore SREG ( = sei() )
         return;
@@ -251,11 +222,3 @@ void hid_report_recv_2_PS3(void) { //dir=out ep=2
     SREG = intr_state; // restore SREG ( = sei() )
     return;
 }
-
-const func_ptr_t hid_report_send_func_list_PS3[] = {
-    hid_report_send_1_PS3
-};
-
-const func_ptr_t hid_report_recv_func_list_PS3[] = {
-    hid_report_recv_2_PS3
-};

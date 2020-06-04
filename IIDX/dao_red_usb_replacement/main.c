@@ -1,12 +1,8 @@
-//http://git.slashdev.ca/ps3-teensy-hid/tree/src
-#include <avr/io.h>
-#include <avr/eeprom.h>
 #include <util/delay.h>
-#include "init.h"
-#include "util.h"
+#include "common.h"
 #include "usb.h"
 #include "states_struct.h"
-#include "common.h"
+#include "modes.h"
 
 /* board specific */
 #if defined(__AVR_AT90USB162__)
@@ -79,7 +75,7 @@ uint8_t out_bit[11]={
     0  //11(E4)
 };
 
-inline void update(void){
+inline void io_task(void){
     uint16_t mask=1;
     for(uint8_t i=0; i<11; i++, mask<<=1){
         if(bit_is_clear(*in_pin[i],in_bit[i])) *out_pin[i]|=(1<<out_bit[i]); //ボタンが押されている:点灯
@@ -202,8 +198,7 @@ int main(void) {
     // and do whatever it does to actually be ready for input
     _delay_ms(1000);
     while (1) {
-        update();
-        for(uint8_t i=0;i<hid_report_send_func_list_len;i++) hid_report_send_func_list[i]();
-        for(uint8_t i=0;i<hid_report_recv_func_list_len;i++) hid_report_recv_func_list[i]();
+        io_task();
+        (*usb_task_ptr)();
     }
 }
