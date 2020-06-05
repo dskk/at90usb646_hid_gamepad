@@ -49,3 +49,11 @@ const uint8_t report_desc_INFINITAS[];
 const struct ep_list_struct ep_list_INFINITAS[];
 const struct desc_list_struct desc_list_INFINITAS[];
 void hid_report_send_INFINITAS(uint8_t byte1, uint8_t byte3, uint8_t byte4);
+// SDVXCLOUD
+const struct str_desc_struct str_desc_product_SDVXCLOUD;
+const uint8_t device_desc_SDVXCLOUD[];
+const uint8_t config_desc_SDVXCLOUD[];
+const uint8_t report_desc_SDVXCLOUD[];
+const struct ep_list_struct ep_list_SDVXCLOUD[];
+const struct desc_list_struct desc_list_SDVXCLOUD[];
+void hid_report_send_SDVXCLOUD(uint8_t byte1, uint8_t byte2, uint8_t byte3);

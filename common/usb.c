@@ -33,6 +33,16 @@ void usb_init(void) {
         usb_task_ptr=&usb_task_INFINITAS;
         break;
     #endif
+    #ifdef MODE_ENABLE_SDVXCLOUD
+    case 16: //SDVXCLOUD
+        ep_list = (const uint8_t *) ep_list_SDVXCLOUD;
+        desc_list = (const uint8_t *) desc_list_SDVXCLOUD;
+        ep_list_len = 2;
+        desc_list_len = 7;
+        is_ps3 = 0;
+        usb_task_ptr=&usb_task_SDVXCLOUD;
+        break;
+    #endif
     default:
         for(;;);
     }
