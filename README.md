@@ -4,8 +4,9 @@
 複数のHIDゲームパッドとしてロールを切り替えながら使えるようにしました。
 
 実装済み機能:
+
 DUALSHOCK3
+
 IIDX INFINITASコン
 
-実装予定機能:
 SDVX cloudコン
