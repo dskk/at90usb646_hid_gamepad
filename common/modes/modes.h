@@ -49,4 +49,3 @@ const uint8_t report_desc_INFINITAS[];
 const struct ep_list_struct ep_list_INFINITAS[];
 const struct desc_list_struct desc_list_INFINITAS[];
 void hid_report_send_INFINITAS(uint8_t byte1, uint8_t byte3, uint8_t byte4);
-void hid_report_recv_INFINITAS(void);

@@ -3,7 +3,7 @@
 #include "modes.h"
 
 #define VID_INFINITAS              0x1ccf
-#define PID_INFINITAS              0x8048 //sdvx:1014
+#define PID_INFINITAS              0x8048
 #define STR_PRODUCT_INFINITAS      L"IIDX INFINITAS controller"
 #define DEVICE_DESC_SIZE_INFINITAS 18
 #define CONFIG_DESC_SIZE_INFINITAS 34
@@ -129,12 +129,12 @@ void hid_report_send_INFINITAS(uint8_t byte1, uint8_t byte3, uint8_t byte4) { //
         SREG = intr_state; // restore SREG ( = sei() )
         return;
     }
-    UEDATX = byte1;
-    UEDATX = 0;
-    UEDATX = byte3;
-    UEDATX = byte4;
-    UEDATX = 0;
-    UEINTX = 0x3A; // send data
+    UEDATX = byte1; //signed char X_AXIS
+    UEDATX = 0;     //signed char Y_AXIS
+    UEDATX = byte3; //button1-8
+    UEDATX = byte4; //button9-16
+    UEDATX = 0;     //constant 0
+    UEINTX = 0x3A;  // send data
     SREG = intr_state; // sei()
     return;
 }

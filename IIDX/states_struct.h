@@ -1,6 +1,9 @@
 #pragma once
 #include "common.h"
 
+#define MODE_ENABLE_PS3
+#define MODE_ENABLE_INFINITAS
+
 struct states_str_t{
     uint16_t  button_state; //pressed=1 else=0
     uint8_t   button_is_locked[16];

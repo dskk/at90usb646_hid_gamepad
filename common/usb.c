@@ -13,6 +13,7 @@ void usb_init(void) {
     uint8_t eep_val = eeprom_read_byte(EEP_ADDR); // read EEPROM
     eeprom_busy_wait();
     switch(eep_val){
+    #ifdef MODE_ENABLE_PS3
     case 1: //PS3
         ep_list = (const uint8_t *) ep_list_PS3;
         desc_list = (const uint8_t *) desc_list_PS3;
@@ -21,6 +22,8 @@ void usb_init(void) {
         is_ps3 = 1;
         usb_task_ptr=&usb_task_PS3;
         break;
+    #endif
+    #ifdef MODE_ENABLE_INFINITAS
     case 2: //INFINITAS
         ep_list = (const uint8_t *) ep_list_INFINITAS;
         desc_list = (const uint8_t *) desc_list_INFINITAS;
@@ -29,6 +32,7 @@ void usb_init(void) {
         is_ps3 = 0;
         usb_task_ptr=&usb_task_INFINITAS;
         break;
+    #endif
     default:
         for(;;);
     }
