@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "modes.h"
 
 #define MODE_ENABLE_PS3
 #define MODE_ENABLE_INFINITAS
